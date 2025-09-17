@@ -1,0 +1,26 @@
+name: terraform-validate-plan
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+jobs:
+  tf:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+      - name: Terraform Init
+        run: terraform -chdir=terraform-aws-autohealing-web init -input=false
+      - name: Terraform Validate
+        run: terraform -chdir=terraform-aws-autohealing-web validate
+      - name: Terraform Plan
+        env:
+          TF_VAR_project_name: autoheal-web
+          TF_VAR_aws_region: us-east-1
+        run: terraform -chdir=terraform-aws-autohealing-web plan -input=false -lock=false -no-color
+
+
