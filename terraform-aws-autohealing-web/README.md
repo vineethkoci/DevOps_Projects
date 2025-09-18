@@ -22,7 +22,7 @@ cd terraform-aws-autohealing-web
 terraform init
 terraform plan -out tf.plan \
   -var "project_name=autoheal-web" \
-  -var "aws_region=us-east-1" \
+  -var "aws_region=ap-south-1" \
   -var "base_capacity=1" \
   -var "additional_buffer=1"
 
@@ -53,7 +53,7 @@ VPC (10.20.0.0/16), IGW, Public RT (0.0.0.0/0)
 ```
 
 ## Variables
-- `aws_region`: AWS region (default `us-east-1`)
+- `aws_region`: AWS region (default `ap-south-1`)
 - `project_name`: Resource name prefix
 - `vpc_cidr`: CIDR for VPC (default `10.20.0.0/16`)
 - `base_capacity`: Required capacity N (default 1)
@@ -70,7 +70,7 @@ VPC (10.20.0.0/16), IGW, Public RT (0.0.0.0/0)
 - No SSH access is required.
 
 ## Estimated monthly cost (AU$ ≤ 20)
-- 2 x t3.micro in `us-east-1`: ~AU$ 10–12 total (on-demand, 730h)
+- 2 x t3.micro in `ap-south-1`: ~AU$ 10–12 total (on-demand, 730h)
 - ALB: ~AU$ 4–6 (low LCU usage + hours)
 - Data transfer minimal (demo): ~AU$ 0–2
 - Total estimate: ~AU$ 16–20 per month
