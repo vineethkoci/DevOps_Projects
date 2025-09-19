@@ -3,14 +3,14 @@
 This Terraform setup creates (via module `modules/web_tier`):
 - VPC with 2 public subnets across 2 AZs
 - Application Load Balancer (HTTP :80)
-- Launch Template that self-provisions Nginx (Amazon Linux 2023)
+- Launch Template that self-provisions Docker and runs NGINX container
 - Auto Scaling Group with N+1 capacity and ELB health checks
 
 Must-haves: 
 - Self healing: ASG replaces unhealthy instances automatically
-- Self provisioning: User data installs and starts Nginx
+- Self provisioning: Cloud-init installs Docker and starts NGINX container
 - N+1 capacity: Desired/min = N + 1 (configurable); can lose 1 VM without downtime
-- Static web: Default Nginx welcome page on port 80
+- Static web: Default NGINX welcome page on port 80 (container)
 - Template: Terraform >= 1.5, AWS provider >= 5.x
 
 ## Usage
@@ -25,20 +25,6 @@ terraform -chdir=terraform-aws-autohealing-web init
 terraform -chdir=terraform-aws-autohealing-web plan -out tf.plan -var "project_name=autoheal-web" -var "aws_region=ap-south-1" -var "base_capacity=1" -var "additional_buffer=1" -var "aws_profile=default"
 terraform -chdir=terraform-aws-autohealing-web apply tf.plan
 terraform -chdir=terraform-aws-autohealing-web output alb_dns_name
-```
-
-Bash:
-```bash
-cd terraform-aws-autohealing-web
-terraform init
-terraform plan -out tf.plan \
-  -var "project_name=autoheal-web" \
-  -var "aws_region=ap-south-1" \
-  -var "base_capacity=1" \
-  -var "additional_buffer=1" \
-  -var "aws_profile=default"
-terraform apply tf.plan
-terraform output alb_dns_name
 ```
 
 Open the ALB DNS in your browser. You should see the Nginx welcome page.
@@ -80,10 +66,20 @@ VPC (10.20.0.0/16), IGW, Public RT (0.0.0.0/0)
 
 ## Assumptions
 - Public subnets and ALB on port 80 are acceptable for this demo.
-- Amazon Linux 2023, x86_64, Nginx default welcome page.
+- Amazon Linux 2023, x86_64, NGINX default welcome page via container.
 - No SSH access is required.
 
 AMI resolution uses the regional SSM public parameter `/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64` to select the latest AL2023 AMI owned by `amazon`.
+
+## Cloud-init (user data) behavior
+- Installs Docker using `dnf` (AL2023) or `amazon-linux-extras` (AL2)
+- Enables and starts the Docker service
+- Adds `ec2-user` to the `docker` group
+- Runs container: `ghcr.io/vineethkoci/nginx-static:latest` mapped to host port 80
+- Uses `--restart unless-stopped` and local log rotation (`max-size=10m`, `max-file=3`)
+- Waits for the container to reach running state before finishing
+
+To change the container image or tag, edit `modules/web_tier/templates/userdata.sh`.
 
 ## Estimated monthly cost (AU$ ≤ 20)
 - 2 x t3.micro in `ap-south-1`: ~AU$ 10–12 total (on-demand, 730h)
@@ -124,7 +120,7 @@ jobs:
 ```
 
 ## Commit history suggestion
-1. Scaffold provider and root variables
+1. AWS provider and root variables
 2. Add module skeleton `modules/web_tier`
 3. Implement VPC/subnets/IGW/RT in module
 4. Add SGs and ALB/TG/listener in module
