@@ -15,21 +15,29 @@ Must-haves:
 
 ## Usage
 
+Prerequisites:
+- AWS credentials via a named profile (`aws_profile`) or environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optional `AWS_SESSION_TOKEN`).
+- Provide `aws_region` explicitly (root variable has no default).
+
+PowerShell:
+```powershell
+terraform -chdir=terraform-aws-autohealing-web init
+terraform -chdir=terraform-aws-autohealing-web plan -out tf.plan -var "project_name=autoheal-web" -var "aws_region=ap-south-1" -var "base_capacity=1" -var "additional_buffer=1" -var "aws_profile=default"
+terraform -chdir=terraform-aws-autohealing-web apply tf.plan
+terraform -chdir=terraform-aws-autohealing-web output alb_dns_name
+```
+
+Bash:
 ```bash
 cd terraform-aws-autohealing-web
-
-# Initialize and plan
 terraform init
 terraform plan -out tf.plan \
   -var "project_name=autoheal-web" \
   -var "aws_region=ap-south-1" \
   -var "base_capacity=1" \
-  -var "additional_buffer=1"
-
-# Apply
+  -var "additional_buffer=1" \
+  -var "aws_profile=default"
 terraform apply tf.plan
-
-# Output the ALB DNS to test
 terraform output alb_dns_name
 ```
 
@@ -53,21 +61,29 @@ VPC (10.20.0.0/16), IGW, Public RT (0.0.0.0/0)
 ```
 
 ## Variables
-- `aws_region`: AWS region (default `ap-south-1`)
+- `aws_region`: AWS region (required)
 - `project_name`: Resource name prefix
+- `environment`: Environment name (default `dev`)
 - `vpc_cidr`: CIDR for VPC (default `10.20.0.0/16`)
+- `public_subnet_newbits`: Newbits for subnetting (default `8`)
 - `base_capacity`: Required capacity N (default 1)
 - `additional_buffer`: Extra instances above N (default 1 for N+1)
 - `instance_type`: EC2 type (default `t3.micro`)
+- `enable_detailed_monitoring`: Enable EC2 detailed monitoring (default `false`)
+- `tags`: Map of extra tags (default `{}`)
+- `aws_profile`: AWS shared config profile name (optional; default `null`)
 
 ## Outputs
 - `alb_dns_name`: Public DNS of the ALB
 - `asg_name`: Auto Scaling Group name
+- `vpc_id`: VPC ID
 
 ## Assumptions
 - Public subnets and ALB on port 80 are acceptable for this demo.
 - Amazon Linux 2023, x86_64, Nginx default welcome page.
 - No SSH access is required.
+
+AMI resolution uses the regional SSM public parameter `/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64` to select the latest AL2023 AMI owned by `amazon`.
 
 ## Estimated monthly cost (AU$ ≤ 20)
 - 2 x t3.micro in `ap-south-1`: ~AU$ 10–12 total (on-demand, 730h)
